@@ -30,6 +30,8 @@ func ReadFile(path string) {
 
 }
 
+var keySet = make(map[string]int32)
+
 func readCSVByLine(opencsv *os.File) {
 	reader := bufio.NewReader(opencsv)
 	count := 0
@@ -49,7 +51,13 @@ func readCSVByLine(opencsv *os.File) {
 			continue
 		}
 		split := strings.SplitN(line, SapComma, limit)
-		parsingField(split)
+		prefix := parsingField(split)
+		num := keySet[prefix]
+		if num == 0 {
+			keySet[prefix] = 1
+		} else {
+			keySet[prefix]++
+		}
 	}
 
 	log.Printf("CSV文件读取完成, 共计: %d 行", count)
