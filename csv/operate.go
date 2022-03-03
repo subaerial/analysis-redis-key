@@ -2,6 +2,7 @@ package operate
 
 import (
 	"bufio"
+	"container/list"
 	"io"
 	"log"
 	"os"
@@ -30,13 +31,12 @@ func ReadFile(path string) {
 
 }
 
-var keySet = make(map[string]int32)
-
 func readCSVByLine(opencsv *os.File) {
 	reader := bufio.NewReader(opencsv)
 	count := 0
 	limit := -1
 
+	bigKeys := *list.New()
 	for {
 		line, err := reader.ReadString('\n')
 		if count == 0 && limit == -1 {
@@ -51,14 +51,34 @@ func readCSVByLine(opencsv *os.File) {
 			continue
 		}
 		split := strings.SplitN(line, SapComma, limit)
-		prefix := parsingField(split)
-		num := keySet[prefix]
-		if num == 0 {
-			keySet[prefix] = 1
-		} else {
-			keySet[prefix]++
+		if len(split) < limit-1 {
+			continue
+		}
+		keyInfo := parsingField(split)
+		if isBigKey(keyInfo) {
+			bigKeys.PushBack(keyInfo)
 		}
 	}
 
 	log.Printf("CSV文件读取完成, 共计: %d 行", count)
+}
+
+// key的阈值为10240，
+//也就是对于string类型的value大于10240的认为是大key，
+//对于list的话如果list长度大于10240认为是大key，
+//对于hash的话如果field的数目大于10240认为是大key
+func isBigKey(keyInfo *RedisKeyInfo) bool {
+	length := int32(0)
+	if keyInfo.keyType == "string" {
+		length = keyInfo.sizeInByte
+	} else if keyInfo.keyType == "hash" {
+		length = keyInfo.numElements
+	} else if keyInfo.keyType == "list" {
+		length = keyInfo.numElements
+	} else if keyInfo.keyType == "set" || keyInfo.keyType == "sortedset" {
+		length = keyInfo.numElements
+	} else if keyInfo.keyType == "zset" {
+		length = keyInfo.numElements
+	}
+	return length > 10240
 }
