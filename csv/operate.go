@@ -18,21 +18,18 @@ const SapComma = ","
 func ReadFile(path string) {
 	opencsv, err := os.Open(path)
 	if err != nil {
-		log.Printf("csv文件读取失败: %s", path)
-		return
+		log.Fatalf("csv文件读取失败: %s", path)
 	}
-
 	defer func(reader *os.File) {
-		err := reader.Close()
-		if err != nil {
-			log.Printf("csv文件流关闭失败: %s", path)
+		if err := reader.Close(); err != nil {
+			log.Fatalf("csv文件关闭失败: %s", path)
 		}
 	}(opencsv)
 
 	readCSVByLine(opencsv)
-
 }
 
+// readCSVByLine 按行读取csv文件
 func readCSVByLine(opencsv *os.File) {
 	reader := bufio.NewReader(opencsv)
 	count := 0
@@ -40,22 +37,20 @@ func readCSVByLine(opencsv *os.File) {
 
 	for {
 		line, err := reader.ReadString('\n')
-		if count == 0 && limit == -1 {
+		if err == io.EOF {
+			break
+		}
+		if (count == 0 && limit == -1) || err != nil {
 			limit = len(strings.Split(line, SapComma))
 			continue
 		}
 		count++
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Println(err)
-			continue
-		}
 
 		split := strings.SplitN(line, SapComma, limit)
 		if len(split) < limit-1 {
 			continue
 		}
+		// 将分割后的字符进行字段对应, 并进行存储
 		keyInfo := parsingField(split)
 		saveBigKeyInfo2Db(keyInfo)
 		go analysisKeyPrefix(keyInfo)
@@ -72,6 +67,7 @@ func readCSVByLine(opencsv *os.File) {
 	log.Printf("CSV文件读取完成, 共计: %d 行", count)
 }
 
+// saveBigKeyInfo2Db 保存bigKey信息到sqlite
 func saveBigKeyInfo2Db(keyInfo *model.RedisKeyInfo) {
 	if isBigKey(keyInfo) {
 		sqlite.InsertRedisKey(keyInfo)
@@ -80,6 +76,7 @@ func saveBigKeyInfo2Db(keyInfo *model.RedisKeyInfo) {
 
 var keySet = sync.Map{}
 
+// 保存分析后的key前缀到map中
 func analysisKeyPrefix(keyInfo *model.RedisKeyInfo) {
 	keyInfo.Key = analysisRedisKey(keyInfo.Key)
 	info, _ := keySet.Load(keyInfo.Key)

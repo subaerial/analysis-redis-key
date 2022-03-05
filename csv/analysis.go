@@ -34,7 +34,7 @@ func parsingField(line []string) *model.RedisKeyInfo {
 	return info
 }
 
-// 第一次分析, 分析出较宽泛的key
+// 分析redis key前缀
 func analysisRedisKey(key string) string {
 	separator, arrays := getBestMatchSeparator(key)
 	prefix := arrays[0] + separator

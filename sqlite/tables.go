@@ -1,5 +1,6 @@
 package sqlite
 
+// 删除表, 每次先删除旧表, 保证每次保存的数据都是最新数据
 func dropRedisKeyTable() {
 	sql := `drop table if exists redis_keys;
 			drop table if exists redis_key_prefixes;`

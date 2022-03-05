@@ -1,5 +1,6 @@
 package model
 
+// RedisKeyInfo csv中的基本信息
 type RedisKeyInfo struct {
 	// Db 数据库默认0
 	// KeyType 类型: 基本的redis key类型: string、hash、list、set、zset
@@ -17,11 +18,13 @@ type RedisKeyInfo struct {
 	Expire            bool
 }
 
+// RedisKey 完整的redis key
 type RedisKey struct {
 	ID      int32         `gorm:"primaryKey"`
 	KeyInfo *RedisKeyInfo `gorm:"embedded"`
 }
 
+// RedisKeyPrefix 解析后的redis key前缀
 type RedisKeyPrefix struct {
 	ID      int32         `gorm:"primaryKey"`
 	KeyInfo *RedisKeyInfo `gorm:"embedded"`
