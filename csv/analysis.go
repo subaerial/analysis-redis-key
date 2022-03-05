@@ -1,34 +1,16 @@
 package operate
 
 import (
-	"log"
+	"analysis.redis/model"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-type RedisKeyInfo struct {
-	// db 数据库默认0
-	// keyType 类型: 基本的redis key类型: string、hash、list、set、zset
-	// key 键
-	// sizeInByte 使用的内存: 包括键、值和其他开销
-	// numElements key中的value的个数
-	// lenLargestElement key中的value的长度
-	// expire 是否设置过期时间c
-	db                int32
-	keyType           string
-	key               string
-	sizeInByte        int32
-	numElements       int32
-	lenLargestElement int32
-	expire            bool
-}
-
 // 对应每行字段
 // 1. big key 不对key进行单独分析, 若长度过大10240则直接返回
 // 2. 分析后的key, 保存内存占用最大的top10, 以及总量最大的top10
-func parsingField(line []string) *RedisKeyInfo {
-	log.Printf("%v", line)
+func parsingField(line []string) *model.RedisKeyInfo {
 	// csv中数据分割后每个值对应的含义
 	db, _ := strconv.Atoi(line[0])
 	sizeInByte, _ := strconv.Atoi(line[3])
@@ -40,14 +22,14 @@ func parsingField(line []string) *RedisKeyInfo {
 		isExpire = true
 	}
 
-	info := &RedisKeyInfo{
-		db:                int32(db),
-		keyType:           line[1],
-		key:               strings.TrimSpace(line[2]),
-		sizeInByte:        int32(sizeInByte),
-		numElements:       int32(numElements),
-		lenLargestElement: int32(lenLargestElement),
-		expire:            isExpire,
+	info := &model.RedisKeyInfo{
+		Db:                int32(db),
+		KeyType:           line[1],
+		Key:               strings.TrimSpace(line[2]),
+		SizeInByte:        int32(sizeInByte),
+		NumElements:       int32(numElements),
+		LenLargestElement: int32(lenLargestElement),
+		Expire:            isExpire,
 	}
 	return info
 }

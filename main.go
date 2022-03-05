@@ -2,13 +2,14 @@ package main
 
 import (
 	"analysis.redis/csv"
+	"analysis.redis/sqlite"
 	"log"
 	"time"
 )
 
 func main() {
+	sqlite.InitDB()
 	start := time.Now().UnixMilli()
-
 	filename := "2022-02-22_10.100.2.33_7001.csv"
 	path := "/opt/tpapp/" + filename
 	operate.ReadFile(path)

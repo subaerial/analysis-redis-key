@@ -1,12 +1,14 @@
 package operate
 
 import (
+	"analysis.redis/model"
+	"analysis.redis/sqlite"
 	"bufio"
-	"container/list"
 	"io"
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
 const SapComma = ","
@@ -36,7 +38,6 @@ func readCSVByLine(opencsv *os.File) {
 	count := 0
 	limit := -1
 
-	bigKeys := *list.New()
 	for {
 		line, err := reader.ReadString('\n')
 		if count == 0 && limit == -1 {
@@ -50,35 +51,84 @@ func readCSVByLine(opencsv *os.File) {
 			log.Println(err)
 			continue
 		}
+
 		split := strings.SplitN(line, SapComma, limit)
 		if len(split) < limit-1 {
 			continue
 		}
 		keyInfo := parsingField(split)
-		if isBigKey(keyInfo) {
-			bigKeys.PushBack(keyInfo)
-		}
+		saveBigKeyInfo2Db(keyInfo)
+		go analysisKeyPrefix(keyInfo)
 	}
 
+	keySet.Range(func(key, value interface{}) bool {
+		prefix := value.(*model.RedisKeyPrefix)
+		if isBigKey(prefix.KeyInfo) || prefix.Count > 40 {
+			sqlite.InsertRedisKeyPrefix(prefix)
+		}
+		return true
+	})
+
 	log.Printf("CSV文件读取完成, 共计: %d 行", count)
+}
+
+func saveBigKeyInfo2Db(keyInfo *model.RedisKeyInfo) {
+	if isBigKey(keyInfo) {
+		sqlite.InsertRedisKey(keyInfo)
+	}
+}
+
+var keySet = sync.Map{}
+
+func analysisKeyPrefix(keyInfo *model.RedisKeyInfo) {
+	keyInfo.Key = analysisRedisKey(keyInfo.Key)
+	info, _ := keySet.Load(keyInfo.Key)
+	if info == nil {
+		info = &model.RedisKeyPrefix{
+			KeyInfo: &model.RedisKeyInfo{
+				Db:                keyInfo.Db,
+				KeyType:           keyInfo.KeyType,
+				Key:               keyInfo.Key,
+				SizeInByte:        keyInfo.SizeInByte,
+				NumElements:       keyInfo.NumElements,
+				LenLargestElement: keyInfo.LenLargestElement,
+				Expire:            keyInfo.Expire,
+			},
+			Count: 1,
+		}
+	} else {
+		temp := info.(*model.RedisKeyPrefix)
+		temp.Count++
+		temp.KeyInfo = &model.RedisKeyInfo{
+			Db:                keyInfo.Db,
+			KeyType:           keyInfo.KeyType,
+			Key:               keyInfo.Key,
+			SizeInByte:        temp.KeyInfo.SizeInByte + keyInfo.SizeInByte,
+			NumElements:       temp.KeyInfo.NumElements + keyInfo.NumElements,
+			LenLargestElement: temp.KeyInfo.LenLargestElement + keyInfo.LenLargestElement,
+			Expire:            keyInfo.Expire,
+		}
+		info = temp
+	}
+	keySet.Store(keyInfo.Key, info)
 }
 
 // key的阈值为10240，
 //也就是对于string类型的value大于10240的认为是大key，
 //对于list的话如果list长度大于10240认为是大key，
 //对于hash的话如果field的数目大于10240认为是大key
-func isBigKey(keyInfo *RedisKeyInfo) bool {
+func isBigKey(keyInfo *model.RedisKeyInfo) bool {
 	length := int32(0)
-	if keyInfo.keyType == "string" {
-		length = keyInfo.sizeInByte
-	} else if keyInfo.keyType == "hash" {
-		length = keyInfo.numElements
-	} else if keyInfo.keyType == "list" {
-		length = keyInfo.numElements
-	} else if keyInfo.keyType == "set" || keyInfo.keyType == "sortedset" {
-		length = keyInfo.numElements
-	} else if keyInfo.keyType == "zset" {
-		length = keyInfo.numElements
+	if keyInfo.KeyType == "string" {
+		length = keyInfo.SizeInByte
+	} else if keyInfo.KeyType == "hash" {
+		length = keyInfo.NumElements
+	} else if keyInfo.KeyType == "list" {
+		length = keyInfo.NumElements
+	} else if keyInfo.KeyType == "set" || keyInfo.KeyType == "sortedset" {
+		length = keyInfo.NumElements
+	} else if keyInfo.KeyType == "zset" {
+		length = keyInfo.NumElements
 	}
 	return length > 10240
 }
