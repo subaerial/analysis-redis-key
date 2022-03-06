@@ -2,11 +2,13 @@ package sqlite
 
 import (
 	"analysis.redis/config"
+	"analysis.redis/mail"
 	"analysis.redis/model"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 var connect *gorm.DB
@@ -28,15 +30,20 @@ func InitDB() {
 
 // 创建sqlite文件
 func createSqliteFile() {
-	if _, err2 := os.Stat(dbUrl); os.IsExist(err2) {
+	if _, err2 := os.Stat(dbUrl); err2 == nil {
 		log.Println("sqlite数据库文件已存在")
 		return
 	}
 
+	dir, _ := filepath.Split(dbUrl)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		mail.SendErrorEmail(err)
+		log.Fatalf("dir: %s 创建失败", dir)
+	}
+
 	if _, err := os.Create(dbUrl); err != nil {
-		log.Fatal("数据库文件创建失败, ", err.Error())
-	} else {
-		log.Println("sqlite数据库文件创建成功,", dbUrl)
+		mail.SendErrorEmail(err)
+		log.Fatalf("sqlite文件创建失败")
 	}
 }
 
@@ -47,6 +54,7 @@ func connectDb() {
 		connect, err = gorm.Open(sqlite.Open(dbUrl), &gorm.Config{})
 	}
 	if err != nil {
+		mail.SendErrorEmail(err)
 		panic("failed to connect database")
 	}
 }

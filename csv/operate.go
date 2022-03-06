@@ -1,6 +1,7 @@
 package operate
 
 import (
+	"analysis.redis/mail"
 	"analysis.redis/model"
 	"analysis.redis/sqlite"
 	"bufio"
@@ -18,10 +19,12 @@ const SapComma = ","
 func ReadFile(path string) {
 	opencsv, err := os.Open(path)
 	if err != nil {
+		mail.SendErrorEmail(err)
 		log.Fatalf("csv文件读取失败: %s", path)
 	}
 	defer func(reader *os.File) {
 		if err := reader.Close(); err != nil {
+			mail.SendErrorEmail(err)
 			log.Fatalf("csv文件关闭失败: %s", path)
 		}
 	}(opencsv)

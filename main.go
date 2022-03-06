@@ -18,14 +18,14 @@ func init() {
 
 func main() {
 	runtime := operate.StartAnalysis(csv)
-	mail.SendEndEmail(runtime)
+	mail.SendEndEmail(csv, runtime)
 }
 
 var csv string
 
 func cmd() {
-	csvUsage := "csv filename, eg: 2022-02-22_10.100.2.33_7001.csv or /opt/2022-02-22_10.100.2.33_7001.csv"
-	flag.StringVar(&csv, "file", "csv", csvUsage)
+	csvUsage := "csv filename, eg: -file=2022-02-22_10.100.2.33_7001.csv or -file=/opt/2022-02-22_10.100.2.33_7001.csv"
+	flag.StringVar(&csv, "file", "", csvUsage)
 	flag.Parse()
 	if csv == "" {
 		fmt.Println("input", csvUsage)

@@ -10,7 +10,7 @@ func buildMsg(from string, to []string, subject string, body string) *gomail.Mes
 	message.SetHeader("From", from)
 	message.SetHeader("To", to...)
 	message.SetHeader("Subject", subject)
-	message.SetBody("text/plain", body)
+	message.SetBody("text/html", body)
 	return message
 }
 
