@@ -1,11 +1,23 @@
 package operate
 
 import (
+	"analysis.redis/config"
 	"analysis.redis/model"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
+
+func StartAnalysis(csv string) int64 {
+	start := time.Now().UnixMilli()
+	ReadFile(csv)
+	end := time.Now().UnixMilli()
+	runtime := (end - start) / 1000
+	log.Printf("key分析完成, 共耗时: %d s", runtime)
+	return runtime
+}
 
 // 对应每行字段
 // 1. big key 不对key进行单独分析, 若长度过大10240则直接返回
@@ -47,17 +59,14 @@ func analysisRedisKey(key string) string {
 	return prefix
 }
 
-// redis key 的拼接符
-var separators = []string{":", "-", "_"}
-
 // 获取最佳的拼接符
 func getBestMatchSeparator(key string) (string, []string) {
 	// 最佳匹配分隔符
 	bestSeparator := ""
 	matchNums := -1
-	for _, separator := range separators {
+	for _, separator := range config.Properties.Redis.BigKey.Separator {
 		size := len(strings.Split(key, separator))
-		if size > 1 && size > matchNums && bestSeparator != ":" {
+		if size > 1 && size > matchNums && bestSeparator != config.Properties.Redis.BigKey.Priority {
 			bestSeparator = separator
 			matchNums = size
 		}

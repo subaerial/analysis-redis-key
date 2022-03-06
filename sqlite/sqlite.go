@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"analysis.redis/config"
 	"analysis.redis/model"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -11,10 +12,11 @@ import (
 var connect *gorm.DB
 
 // db url
-const dbUrl = "data/bigkey.db"
+var dbUrl string
 
 // InitDB 初始化数据库
 func InitDB() {
+	dbUrl = config.Properties.Database.Url
 	createSqliteFile()
 	connectDb()
 	// 先清空表, 保证每次值存储当天分析数据
@@ -83,13 +85,13 @@ func SelectOneByKeyPrefix(key string) *model.RedisKeyPrefix {
 // SelectTop100BigKeyByMemory 查找内存占用TOP100的bigKey
 func SelectTop100BigKeyByMemory(isExpire bool) *[]model.RedisKey {
 	var infos *[]model.RedisKey
-	connect.Where("expire = ?", isExpire).Order("size_in_byte desc").Limit(100).Find(&infos)
+	connect.Where("expire = ?", isExpire).Order("size_in_byte desc").Limit(config.Properties.Redis.BigKey.Memory).Find(&infos)
 	return infos
 }
 
 // SelectTop100BigKeyByLen 查找长度占用TOP100的bigKey
 func SelectTop100BigKeyByLen(isExpire bool) *[]model.RedisKey {
 	var infos *[]model.RedisKey
-	connect.Where("expire = ?", isExpire).Order("num_elements desc").Limit(100).Find(&infos)
+	connect.Where("expire = ?", isExpire).Order("num_elements desc").Limit(config.Properties.Redis.BigKey.Len).Find(&infos)
 	return infos
 }

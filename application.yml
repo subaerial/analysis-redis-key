@@ -1,0 +1,17 @@
+mail:
+  dialer:
+    host: smtp.126.com
+    port: 25
+    username: moxfan@126.com
+    password: stable110
+  receiver:
+    - wangpf09@126.com
+    - moxxfan@gmail.com
+database:
+  url: data/bigkey.db
+redis:
+  bigkey:
+    memory: 100
+    len: 100
+    priority: ':'
+    separator: [ ':', '-', '_' ]
